@@ -1,11 +1,22 @@
-let s:state = {}
+let s:store = {}
 
 function! salvor#split_term()
   wincmd v
   terminal
 endfunction
 
+function! Reducer(state, action)
+  if action.type == "new_tab"
+    let new_tabs = state.tabs + [[]]
+    return z#assign(state, {
+          \ 'tabs': state.tabs + [[]],
+          \ 'current_tab': state.current_tab + 1
+          \ })
+  endif
+endfunction
+
 function! salvor#initialize()
+  let s:store =  s:store.initialize()
   let s:state = {
         \ 'is_open': 0,
         \ 'tabs': [[]],
