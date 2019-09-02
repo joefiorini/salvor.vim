@@ -1,8 +1,10 @@
-let s:is_open = 0
-let s:tabs = [[]]
-let s:return_to_window = -1
-let s:current_tab = 0
-let s:last_focused_buf = -1
+let s:state = {
+      \ 'is_open': 0,
+      \ 'tabs': [[]],
+      \ 'return_to_window': -1,
+      \ 'current_tab': 0,
+      \ 'last_focused_buf': -1
+      \ }
 
 function! salvor#split_term()
   wincmd v
@@ -10,45 +12,47 @@ function! salvor#split_term()
 endfunction
 
 function! salvor#initialize()
-  let s:tabs = [[]]
-  let s:current_tab = 0
-  let s:is_open = 0
-  let s:return_to_window = -1
+let s:state = {
+      \ 'is_open': 0,
+      \ 'tabs': [[]],
+      \ 'return_to_window': -1,
+      \ 'current_tab': 0,
+      \ 'last_focused_buf': -1
+      \ }
 endfunction
 
 function! salvor#new_tab()
   call salvor#toggle_terminals()
-  let s:tabs = s:tabs + [[]]
-  let s:current_tab += 1
+  let s:state.tabs += [[]]
+  let s:state.current_tab += 1
   call salvor#toggle_terminals()
 endfunction
 
 function! salvor#next_tab()
-  if s:current_tab == len(s:tabs) - 1
+  if s:state.current_tab == len(s:state.tabs) - 1
     return
   endif
   call salvor#toggle_terminals()
-  let s:current_tab += 1
+  let s:state.current_tab += 1
   call salvor#toggle_terminals()
 endfunction
 
 function! salvor#prev_tab()
-  if s:current_tab == 0
+  if s:state.current_tab == 0
     return
   endif
   call salvor#toggle_terminals()
-    let s:current_tab -= 1
+    let s:state.current_tab -= 1
   call salvor#toggle_terminals()
 endfunction
 
 function! salvor#set_focused_buf()
-  echom "Focused:" . bufnr("%")
-  let s:last_focused_buf = bufnr("%")
+  let s:state.last_focused_buf = bufnr("%")
 endfunction
 
 function! salvor#setup_terminal()
   let current_buf = bufnr("%")
-  let current_tab = s:tabs[s:current_tab]
+  let current_tab = s:state.tabs[s:state.current_tab]
 
   if index(current_tab, current_buf) !=# -1
     return
@@ -65,25 +69,25 @@ function! salvor#setup_terminal()
     autocmd BufEnter <buffer> call salvor#set_focused_buf()
   augroup END
 
-  let s:tabs[s:current_tab] += [current_buf]
+  let s:state.tabs[s:state.current_tab] += [current_buf]
 endfunction
 
 function! salvor#dump_state()
-  echom "is_open: " . s:is_open
-  echom "current_tab: " . s:current_tab
-  echom "last_focused_buf: " . s:last_focused_buf
-  echo "tabs: " . join(z#map(s:tabs, {idx, val -> join(val, ",")}), ",")
+  echom "is_open: " . s:state.is_open
+  echom "current_tab: " . s:state.current_tab
+  echom "last_focused_buf: " . s:state.last_focused_buf
+  echo "tabs: " . join(z#map(s:state.tabs, {idx, val -> join(val, ",")}), ",")
 endfunction
 
 function! salvor#toggle_terminals()
-  if !s:is_open
+  if !s:state.is_open
     augroup salvor
       autocmd!
       autocmd TermOpen * call salvor#setup_terminal()
     augroup END
     setlocal winfixheight
-    let s:return_to_window = winnr()
-    let current_tab = s:tabs[s:current_tab]
+    let s:state.return_to_window = winnr()
+    let current_tab = s:state.tabs[s:state.current_tab]
     exec "20new"
     if !empty(current_tab)
       let tmpbuf = bufnr("%")
@@ -98,28 +102,27 @@ function! salvor#toggle_terminals()
       exec "bwipeout!" . tmpbuf
 
       " Leave focus in the previously focused terminal buffer
-      if s:last_focused_buf != -1
-        let win = bufwinnr(s:last_focused_buf) 
-        echo "focusing window: " . win
+      if s:state.last_focused_buf != -1
+        let win = bufwinnr(s:state.last_focused_buf) 
         exec win . "wincmd w"
       endif
     else
       terminal
     endif
-    let s:is_open = 1
+    let s:state.is_open = 1
   else
     autocmd! salvor
-    for buf in s:tabs[s:current_tab]
+    for buf in s:state.tabs[s:state.current_tab]
       let win = bufwinnr(buf) 
       noautocmd exec win . "wincmd c"
     endfor
-    execute s:return_to_window . "wincmd w"
-    let s:is_open = 0
+    execute s:state.return_to_window . "wincmd w"
+    let s:state.is_open = 0
   endif
 endfunction
 
 function! salvor#wipeout()
-  for tab in s:tabs
+  for tab in s:state.tabs
     for buf in tab
       exec "bwipeout!" . buf
     endfor
