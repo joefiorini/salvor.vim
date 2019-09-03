@@ -6,13 +6,13 @@ function! salvor#split_term()
 endfunction
 
 function! salvor#initialize()
-let s:state = {
-      \ 'is_open': 0,
-      \ 'tabs': [[]],
-      \ 'return_to_window': -1,
-      \ 'current_tab': 0,
-      \ 'last_focused_buf': -1
-      \ }
+  let s:state = {
+        \ 'is_open': 0,
+        \ 'tabs': [[]],
+        \ 'return_to_window': -1,
+        \ 'current_tab': 0,
+        \ 'last_focused_buf': -1
+        \ }
 endfunction
 
 function! salvor#new_tab()
@@ -20,6 +20,18 @@ function! salvor#new_tab()
   let s:state.tabs += [[]]
   let s:state.current_tab += 1
   call salvor#toggle_terminals()
+endfunction
+
+function! salvor#current_tab()
+  return s:state.current_tab
+endfunction
+
+function! salvor#total_tabs()
+  return len(s:state.tabs)
+endfunction
+
+function! salvor#get_status_string()
+  return "Term Tab " . (salvor#current_tab() + 1) . "/" . salvor#total_tabs()
 endfunction
 
 function! salvor#next_tab()
@@ -53,6 +65,7 @@ function! salvor#setup_terminal()
   endif
 
   setlocal bufhidden=hide
+  setfiletype salvor_term
 
   nnoremap <silent> <buffer> <space>twv :call salvor#split_term()<cr>
   nnoremap <silent> <buffer> <space>ttt :call salvor#new_tab()<cr>
@@ -82,7 +95,7 @@ function! salvor#toggle_terminals()
     setlocal winfixheight
     let s:state.return_to_window = winnr()
     let current_tab = s:state.tabs[s:state.current_tab]
-    exec "20new"
+    exec "botright 20new"
     if !empty(current_tab)
       let tmpbuf = bufnr("%")
       for buf in current_tab
@@ -124,3 +137,6 @@ function! salvor#wipeout()
   call salvor#initialize()
 endfunction
 
+function! salvor#lightline()
+  return &filetype ==# 'salvor_term' ? salvor#get_status_string() : ''
+endfunction
