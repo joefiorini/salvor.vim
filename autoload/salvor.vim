@@ -1,8 +1,8 @@
 let s:state = {}
 
 function! salvor#split_term()
-  wincmd v
-  terminal
+  vnew
+  call salvor#open_terminal()
 endfunction
 
 function! salvor#initialize()
@@ -60,9 +60,14 @@ function! salvor#setup_terminal()
   let current_buf = bufnr("%")
   let current_tab = s:state.tabs[s:state.current_tab]
 
+  if !getbufvar(current_buf, "salvor_term", 0)
+    return
+  endif
+
   if index(current_tab, current_buf) !=# -1
     return
   endif
+
 
   setlocal bufhidden=hide
   setfiletype salvor_term
@@ -83,7 +88,7 @@ function! salvor#dump_state()
   echom "is_open: " . s:state.is_open
   echom "current_tab: " . s:state.current_tab
   echom "last_focused_buf: " . s:state.last_focused_buf
-  echo "tabs: " . join(z#map(s:state.tabs, {idx, val -> join(val, ",")}), ",")
+  echo "tabs: " . join(z#map(s:state.tabs, {idx, val -> join(val, ",")}), ";")
 endfunction
 
 function! salvor#toggle_terminals()
@@ -96,6 +101,7 @@ function! salvor#toggle_terminals()
     let s:state.return_to_window = winnr()
     let current_tab = s:state.tabs[s:state.current_tab]
     exec "botright 20new"
+    call setbufvar(bufnr("%"), "salvor_term", 1)
     if !empty(current_tab)
       let tmpbuf = bufnr("%")
       for buf in current_tab
@@ -114,7 +120,7 @@ function! salvor#toggle_terminals()
         exec win . "wincmd w"
       endif
     else
-      terminal
+      call salvor#open_terminal()
     endif
     let s:state.is_open = 1
   else
@@ -126,6 +132,11 @@ function! salvor#toggle_terminals()
     execute s:state.return_to_window . "wincmd w"
     let s:state.is_open = 0
   endif
+endfunction
+
+function! salvor#open_terminal()
+  call setbufvar(bufnr("%"), "salvor_term", 1)
+  call termopen($SHELL)
 endfunction
 
 function! salvor#wipeout()
